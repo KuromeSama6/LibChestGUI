@@ -1,12 +1,15 @@
 package moe.ku6.libchestgui.gui;
 
 import moe.ku6.libchestgui.InventoryUserInterface;
+import moe.ku6.libchestgui.UserInterface;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -15,13 +18,18 @@ import java.util.Stack;
 public class ChestGUI extends InventoryUserInterface {
     private final Stack<Form> forms = new Stack<>();
     private Inventory currentInventory;
+    private boolean closedThisTick;
 
-    public ChestGUI(JavaPlugin plugin, Player player) {
-        super(plugin, player);
+    public ChestGUI(UserInterface userInterface) {
+        super(userInterface);
     }
 
     public void Push(Form form) {
-        forms.remove(form);
+        var current = forms.stream()
+                        .filter(c -> c.getTitle().equals(form.getTitle()))
+                        .findFirst()
+                        .orElse(null);
+        forms.remove(current);
         forms.push(form);
         form.EnsureValid();
 
@@ -57,7 +65,8 @@ public class ChestGUI extends InventoryUserInterface {
         var form = GetActiveForm();
         if (form == null) {
             if (currentInventory != null) {
-                player.closeInventory();
+                userInterface.getPlayer().closeInventory();
+                closedThisTick = true;
                 currentInventory = null;
             }
             return;
@@ -65,40 +74,104 @@ public class ChestGUI extends InventoryUserInterface {
         form.EnsureValid();
 
         var type = form.GetInventoryType();
-        if (type == InventoryType.CHEST) currentInventory = Bukkit.createInventory(player, form.getRows() * 9, form.getTitle());
-        else currentInventory = Bukkit.createInventory(player, form.GetInventoryType(), form.getTitle());
+        if (type == InventoryType.CHEST) currentInventory = Bukkit.createInventory(userInterface.getPlayer(), form.getRows() * 9, form.getTitle());
+        else currentInventory = Bukkit.createInventory(userInterface.getPlayer(), form.GetInventoryType(), form.getTitle());
 
-        form.Render(player.getInventory(), currentInventory);
-        player.openInventory(currentInventory);
+        form.Render(userInterface.getPlayer().getInventory(), currentInventory);
+        if (currentInventory != null) closedThisTick = true;
+        userInterface.getPlayer().openInventory(currentInventory);
         if (form.getOnOpen() != null) {
             form.getOnOpen().Handle();
         }
     }
 
-    @EventHandler
-    private void OnClick(InventoryClickEvent e) {
-        if (e.getWhoClicked() != player) return;
+    public void Refresh() {
+        var form = GetActiveForm();
+        if (form == null) return;
+        form.Render(userInterface.getPlayer().getInventory(), currentInventory);
+        if (form.getOnUpdate() != null) {
+            form.getOnUpdate().Handle();
+        }
+    }
+
+    public void Refresh(Activity activity) {
+        var form = GetActiveForm();
+        if (form == null) return;
+        form.Render(userInterface.getPlayer().getInventory(), currentInventory, activity);
+        if (form.getOnUpdate() != null) {
+            form.getOnUpdate().Handle();
+        }
+    }
+
+    @Override
+    public void OnDropItem(PlayerDropItemEvent e) {
+        if (GetActiveForm() != null) {
+            var form = GetActiveForm();
+            if (form.getOnPostDropItem() != null) {
+                form.getOnPostDropItem().Handle(e);
+            }
+        }
+    }
+
+    @Override
+    public void OnInventoryClick(InventoryClickEvent e) {
+        if (e.getWhoClicked() != userInterface.getPlayer()) return;
         var current = GetActiveForm();
         if (current == null) return;
+
         var ctx = current.Handle(e);
         if (ctx == null) return;
 
-        if (ctx.isPopNow()) {
-            Pop(current);
+        if (ctx.isAllowed() && ctx.getActivity().getPostClickHandler() != null) {
+            ctx.getActivity().getPostClickHandler().Handle(ctx);
         }
 
-        if (ctx.isCloseNow()) {
-            Clear();
-        }
+        Bukkit.getScheduler().scheduleSyncDelayedTask(userInterface.getPlugin(), () -> {
+            if (ctx.isPopNow()) {
+                Pop(current);
+                return;
+            }
+
+            if (ctx.isCloseNow()) {
+                Clear();
+                return;
+            }
+
+            if (ctx.isRerenderNow()) {
+                Rerender();
+                return;
+            }
+
+            if (ctx.isRefreshNow()) {
+                current.Render(userInterface.getPlayer().getInventory(), currentInventory);
+                if (current.getOnUpdate() != null) {
+                    current.getOnUpdate().Handle();
+                }
+                e.setCancelled(true);
+                return;
+            }
+        }, 1);
     }
 
-    @EventHandler
-    private void OnClose(InventoryCloseEvent event) {
-        if (event.getPlayer() != player) return;
+    @Override
+    public void OnInventoryClose(InventoryCloseEvent event) {
+        if (event.getPlayer() != userInterface.getPlayer()
+        ) return;
         var current = GetActiveForm();
         if (current == null) return;
-        Pop(current);
+
+        if (closedThisTick) {
+            closedThisTick = false;
+            return;
+        }
+        Bukkit.getScheduler().scheduleSyncDelayedTask(userInterface.getPlugin(), () -> Pop(current), 1);
     }
+
+    @Override
+    public void OnInteract(PlayerInteractEvent e) {
+
+    }
+
 
     public Form GetActiveForm() {
         return forms.isEmpty() ? null : forms.peek();

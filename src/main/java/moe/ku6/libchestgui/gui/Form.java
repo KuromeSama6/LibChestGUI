@@ -2,6 +2,7 @@ package moe.ku6.libchestgui.gui;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import moe.ku6.libchestgui.util.IntPair;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -22,6 +23,9 @@ public class Form {
     private final List<Activity> activities = new ArrayList<>();
     private IFormOpenHandler onOpen;
     private IFormCloseHandler onClose;
+    private IFormUpdateHandler onUpdate;
+    private IDropItemHandler onDropItem;
+    private IPostDropItemHandler onPostDropItem;
 
     public void EnsureValid() {
         if (activities.isEmpty()) throw new IllegalArgumentException("No activities");
@@ -42,28 +46,62 @@ public class Form {
         throw new IllegalArgumentException("Multiple inventory types: %s".formatted(ret));
     }
 
-    public void Render(PlayerInventory bottom, Inventory top) {
+    public void Render(PlayerInventory inventory, Inventory top) {
         activities.sort(Comparator.comparingInt(c -> -c.getLayer()));
         for (var activity : activities) {
-            var slots = activity.getSlots();
-            for (var slot : slots.entrySet()) {
-                var item = slot.getValue().getItem();
-                switch (activity.getLocation()) {
-                    case PLAYER -> {
-                        bottom.setItem(slot.getKey(), item);
-                    }
-                    case CHEST -> {
-                        top.setItem(slot.getKey(), item);
-                    }
+            Render(inventory, top, activity);
+        }
+    }
+
+    public void Render(PlayerInventory bottom, Inventory top, Activity activity) {
+        var slots = activity.getSlots();
+        var inventory = activity.getLocation() == InventoryType.PLAYER ? bottom : top;
+        for (int i = 0; i < inventory.getSize(); i++) {
+            if (!activity.getOccupancy().contains(i)) continue;
+
+            var slot = slots.get(i);
+            if (slot == null) {
+                if (!activity.isKeepOriginal()) {
+                    inventory.setItem(i, null);
                 }
+            } else {
+                inventory.setItem(i, slot.getItem());
             }
         }
+    }
+
+    public Activity GetActivityAt(InventoryType type, int x, int y) {
+        return activities.stream()
+                .sorted(Comparator.comparingInt(c -> -c.getLayer()))
+                .filter(c -> c.getLocation() == type)
+                .filter(c -> c.getOccupancy().contains(c.GetSlot(new IntPair(x, y))))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public Activity GetActivity(InventoryType type, int startX, int startY, int endX, int endY) {
+        return activities.stream()
+                .sorted(Comparator.comparingInt(c -> -c.getLayer()))
+                .filter(c -> c.getLocation() == type)
+                .filter(c -> c.getStart().equals(new IntPair(startX, startY)) && c.getEnd().equals(new IntPair(endX, endY)))
+                .findFirst()
+                .orElse(null);
     }
 
     public ActionContext Handle(InventoryClickEvent e) {
         var view = e.getView();
         var inv = e.getClickedInventory();
         InventoryType location;
+
+
+        var slot = e.getSlot();
+        if (e.getSlot() < 0) {
+            // dropped
+            if (onDropItem != null) {
+                onDropItem.Handle(e);
+                return null;
+            }
+        }
 
         if (inv == view.getBottomInventory()) location = InventoryType.PLAYER;
         else if (inv == view.getTopInventory()) {
@@ -73,7 +111,6 @@ public class Form {
             location = null;
         }
 
-        var slot = e.getSlot();
         var activity = activities.stream()
                 .sorted(Comparator.comparingInt(c -> -c.getLayer()))
                 .filter(c -> c.getLocation() == location)
@@ -98,14 +135,12 @@ public class Form {
         );
 
         var activitySlot = activity.Get(slot);
-        if (activitySlot != null) {
-            activitySlot.getHandler().Handle(ctx);
-            if (!ctx.isAllowed()) {
-                e.setCancelled(true);
-            }
-
-        } else {
-            if (!activity.isMutable()) e.setCancelled(true);
+//        System.out.println("click=%s, action=%s, slot=%s, activitySlot=%s".formatted(e.getClick(), e.getAction(), slot, activitySlot));
+        var handler = activitySlot == null ? activity.getDefaultHandler() : activitySlot.getHandler();
+        handler.Handle(ctx);
+//        System.out.println("allowed=%s".formatted(ctx.isAllowed()));
+        if (!ctx.isAllowed()) {
+            e.setCancelled(true);
         }
 
         return ctx;

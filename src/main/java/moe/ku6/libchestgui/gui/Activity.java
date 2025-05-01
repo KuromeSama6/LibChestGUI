@@ -14,7 +14,9 @@ public class Activity {
     private final HashSet<Integer> occupancy = new HashSet<>();
     private IntPair start, end;
     private final Map<Integer, ActivitySlot> slots = new HashMap<>();
-    private boolean mutable;
+    private IActionHandler defaultHandler = IActionHandler.Deny();
+    private IPostClickHandler postClickHandler;
+    private boolean keepOriginal;
 
     public Activity(int layer, InventoryType location, int startX, int startY, int endX, int endY) {
         this.layer = layer;
@@ -32,6 +34,8 @@ public class Activity {
                 occupancy.add(GetSlot(new IntPair(x, y)));
             }
         }
+
+        keepOriginal = location == InventoryType.PLAYER;
     }
 
     public int GetSlot(IntPair pos) {
@@ -71,19 +75,21 @@ public class Activity {
         Set(slot, item, handler);
     }
     public void Set(int slot, ItemStack item) {
-        Set(slot, item, IActionHandler.Deny());
+        Set(slot, item, defaultHandler);
     }
     public void Set(int slot, ItemStack item, IActionHandler handler) {
+        if (item == null) {
+            Remove(slot);
+            return;
+        }
         slots.put(slot, new ActivitySlot(item, handler));
     }
 
     public int FirstFree() {
-        for (int i = 0; i < occupancy.size(); i++) {
-            if (!occupancy.contains(i)) {
-                return i;
-            }
-        }
-        return -1;
+        return occupancy.stream()
+                .filter(slot -> !slots.containsKey(slot))
+                .min(Comparator.naturalOrder())
+                .orElse(-1);
     }
     public List<ItemStack> Add(ItemStack... items) {
         var overflow = new ArrayList<ItemStack>();
@@ -98,8 +104,17 @@ public class Activity {
         return overflow;
     }
 
+    public boolean Add(ItemStack item, IActionHandler handler) {
+        int slot = FirstFree();
+        if (slot == -1) {
+            return false;
+        }
+        Set(slot, item, handler);
+        return true;
+    }
+
     public void Fill(IntPair from, IntPair to, ItemStack item) {
-        Fill(from, to, item, IActionHandler.Deny());
+        Fill(from, to, item, defaultHandler);
     }
     public void Fill(IntPair from, IntPair to, ItemStack item, IActionHandler handler) {
         if (from.x() > to.x() || from.y() > to.y()) {
@@ -113,7 +128,7 @@ public class Activity {
         }
     }
     public void Fill(int from, int to, ItemStack item) {
-        Fill(from, to, item, IActionHandler.Deny());
+        Fill(from, to, item, defaultHandler);
     }
     public void Fill(int from, int to, ItemStack item, IActionHandler handler) {
         if (from > to) {
@@ -121,6 +136,16 @@ public class Activity {
         }
         for (int i = from; i <= to; i++) {
             Set(i, item, handler);
+        }
+    }
+    public void Fill(ItemStack item) {
+        for (var slot : occupancy) {
+            Set(slot, item);
+        }
+    }
+    public void Fill(ItemStack item, IActionHandler handler) {
+        for (var slot : occupancy) {
+            Set(slot, item, handler);
         }
     }
 

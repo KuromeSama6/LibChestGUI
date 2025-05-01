@@ -1,6 +1,7 @@
-package moe.ku6.libchestgui;
+package moe.ku6.libchestgui.hotbar;
 
-import moe.ku6.libchestgui.hotbar.Menu;
+import moe.ku6.libchestgui.InventoryUserInterface;
+import moe.ku6.libchestgui.UserInterface;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,12 +17,11 @@ import java.util.Stack;
 public class HotbarMenu extends InventoryUserInterface {
     private final Stack<Menu> menus = new Stack<>();
 
-    public HotbarMenu(JavaPlugin plugin, Player player) {
-        super(plugin, player);
+    public HotbarMenu(UserInterface userInterface) {
+        super(userInterface);
     }
 
     public void PushMenu(Menu menu) {
-        EnsureValid();
         if (menu == null) {
             throw new IllegalArgumentException("Menu cannot be null.");
         }
@@ -30,7 +30,6 @@ public class HotbarMenu extends InventoryUserInterface {
     }
 
     public void PushMenuClean(Menu menu) {
-        EnsureValid();
         if (menu == null) {
             throw new IllegalArgumentException("Menu cannot be null.");
         }
@@ -40,7 +39,6 @@ public class HotbarMenu extends InventoryUserInterface {
     }
 
     public void PopMenu() {
-        EnsureValid();
         if (menus.empty()) {
             throw new IllegalStateException("No menus to pop.");
         }
@@ -49,7 +47,6 @@ public class HotbarMenu extends InventoryUserInterface {
     }
 
     public void PopAllMenus() {
-        EnsureValid();
         menus.clear();
         ApplyMenu();
     }
@@ -58,12 +55,12 @@ public class HotbarMenu extends InventoryUserInterface {
         var menu = GetActiveMenu();
         if (menu == null) {
             for (int i = 0; i < 9; i++) {
-                player.getInventory().clear(i);
+                userInterface.getPlayer().getInventory().clear(i);
             }
             return;
         }
 
-        var inv = player.getInventory();
+        var inv = userInterface.getPlayer().getInventory();
         for (int i = 0; i < 9; i++) {
             var item = menu.GetItem(i);
             if (item != null) {
@@ -74,9 +71,9 @@ public class HotbarMenu extends InventoryUserInterface {
         }
     }
 
-    @EventHandler
-    private void OnPlayerInteract(PlayerInteractEvent e) {
-        if (e.getPlayer() != player) return;
+    @Override
+    public void OnInteract(PlayerInteractEvent e) {
+        if (e.getPlayer() != userInterface.getPlayer()) return;
         var action = e.getAction();
         var menu = GetActiveMenu();
         if (menu == null) return;
@@ -96,18 +93,19 @@ public class HotbarMenu extends InventoryUserInterface {
         }
     }
 
-    @EventHandler
-    private void OnPlayerDropItem(PlayerDropItemEvent e) {
-        if (e.getPlayer() != player) return;
+    @Override
+    public void OnDropItem(PlayerDropItemEvent e) {
+        if (e.getPlayer() != userInterface.getPlayer()) return;
         if (GetActiveMenu() != null) {
+            System.out.println("drop item");
             e.setCancelled(true);
             return;
         }
     }
 
-    @EventHandler
-    private void OnInventoryClick(InventoryClickEvent e) {
-        if (e.getWhoClicked() != player) return;
+    @Override
+    public void OnInventoryClick(InventoryClickEvent e) {
+        if (e.getWhoClicked() != userInterface.getPlayer()) return;
         var slot = e.getSlot();
         if (slot >= 9 || GetActiveMenu() == null) return;
 
@@ -136,18 +134,22 @@ public class HotbarMenu extends InventoryUserInterface {
         }
     }
 
+    @Override
+    public void OnInventoryClose(InventoryCloseEvent e) {
+
+    }
+
     @EventHandler
     private void OnPlayerCloseInventory(InventoryCloseEvent e) {
-        if (e.getPlayer() != player) return;
+        if (e.getPlayer() != userInterface.getPlayer()) return;
         if (GetActiveMenu() != null) {
-            Bukkit.getScheduler().scheduleSyncDelayedTask(getPlugin(), () -> {
-                if (player.getOpenInventory() == null) ApplyMenu();
+            Bukkit.getScheduler().scheduleSyncDelayedTask(userInterface.getPlugin(), () -> {
+                if (userInterface.getPlayer().getOpenInventory() == null) ApplyMenu();
             }, 1);
         }
     }
 
     public Menu GetActiveMenu() {
-        EnsureValid();
         return menus.empty() ? null : menus.peek();
     }
 }

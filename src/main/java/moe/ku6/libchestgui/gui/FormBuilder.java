@@ -39,6 +39,9 @@ public class FormBuilder {
         return this;
     }
 
+    public FormBuilder Activity(int startX, int startY, int endX, int endY) {
+        return Activity(InventoryType.CHEST, startX, startY, endX, endY);
+    }
     public FormBuilder Activity(InventoryType type, int startX, int startY, int endX, int endY) {
         return Activity(0, type, startX, startY, endX, endY);
     }
@@ -53,7 +56,12 @@ public class FormBuilder {
     }
     public FormBuilder Mutable(boolean mutable) {
         EnsureEditingActivity();
-        editingActivity.setMutable(mutable);
+        editingActivity.setDefaultHandler(mutable ? IActionHandler.Allow() : IActionHandler.Deny());
+        return this;
+    }
+    public FormBuilder DefaultHandler(IActionHandler handler) {
+        EnsureEditingActivity();
+        editingActivity.setDefaultHandler(handler);
         return this;
     }
 
@@ -86,9 +94,33 @@ public class FormBuilder {
         editingActivity.Fill(new IntPair(startX, startY), new IntPair(endX, endY), item, handler);
         return this;
     }
+    public FormBuilder Fill(ItemStack item) {
+        EnsureEditingActivity();
+        editingActivity.Fill(item);
+        return this;
+    }
+
+    public FormBuilder Fill(ItemStack item, IActionHandler handler) {
+        EnsureEditingActivity();
+        editingActivity.Fill(item, handler);
+        return this;
+    }
+
     public FormBuilder Remove(int startX, int startY, int endX, int endY) {
         EnsureEditingActivity();
         editingActivity.Remove(new IntPair(startX, startY), new IntPair(endX, endY));
+        return this;
+    }
+
+    public FormBuilder KeepOriginal(boolean keep) {
+        EnsureEditingActivity();
+        editingActivity.setKeepOriginal(keep);
+        return this;
+    }
+
+    public FormBuilder OnPostClick(IPostClickHandler handler) {
+        EnsureEditingActivity();
+        editingActivity.setPostClickHandler(handler);
         return this;
     }
 
@@ -98,6 +130,18 @@ public class FormBuilder {
     }
     public FormBuilder OnClose(IFormCloseHandler handler) {
         form.setOnClose(handler);
+        return this;
+    }
+    public FormBuilder OnUpdate(IFormUpdateHandler handler) {
+        form.setOnUpdate(handler);
+        return this;
+    }
+    public FormBuilder OnDropItem(IDropItemHandler handler) {
+        form.setOnDropItem(handler);
+        return this;
+    }
+    public FormBuilder OnPostDropItem(IPostDropItemHandler handler) {
+        form.setOnPostDropItem(handler);
         return this;
     }
 
