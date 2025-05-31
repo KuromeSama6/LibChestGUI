@@ -97,7 +97,6 @@ public class HotbarMenu extends InventoryUserInterface {
     public void OnDropItem(PlayerDropItemEvent e) {
         if (e.getPlayer() != userInterface.getPlayer()) return;
         if (GetActiveMenu() != null) {
-            System.out.println("drop item");
             e.setCancelled(true);
             return;
         }

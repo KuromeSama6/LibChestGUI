@@ -1,5 +1,7 @@
 package moe.ku6.libchestgui.gui;
 
+import lombok.Getter;
+import lombok.Setter;
 import moe.ku6.libchestgui.InventoryUserInterface;
 import moe.ku6.libchestgui.UserInterface;
 import org.bukkit.Bukkit;
@@ -18,6 +20,7 @@ import java.util.Stack;
 public class ChestGUI extends InventoryUserInterface {
     private final Stack<Form> forms = new Stack<>();
     private Inventory currentInventory;
+    @Setter @Getter
     private boolean closedThisTick;
 
     public ChestGUI(UserInterface userInterface) {

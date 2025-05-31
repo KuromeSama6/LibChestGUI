@@ -68,7 +68,7 @@ public class Activity {
     }
 
     public void Set(IntPair pos, ItemStack item) {
-        Set(pos, item, null);
+        Set(pos, item, defaultHandler);
     }
     public void Set(IntPair pos, ItemStack item, IActionHandler handler) {
         int slot = GetSlot(pos);

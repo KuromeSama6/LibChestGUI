@@ -128,8 +128,8 @@ public class Form {
                 this,
                 activity,
                 e,
-                clickType == ClickType.LEFT,
-                clickType == ClickType.RIGHT,
+                clickType == ClickType.LEFT || clickType == ClickType.SHIFT_LEFT,
+                clickType == ClickType.RIGHT || clickType == ClickType.SHIFT_RIGHT,
                 clickType == ClickType.SHIFT_LEFT || clickType == ClickType.SHIFT_RIGHT,
                 e.getAction() == InventoryAction.DROP_ALL_CURSOR || e.getAction() == InventoryAction.DROP_ONE_CURSOR || e.getAction() == InventoryAction.DROP_ALL_SLOT || e.getAction() == InventoryAction.DROP_ONE_SLOT
         );

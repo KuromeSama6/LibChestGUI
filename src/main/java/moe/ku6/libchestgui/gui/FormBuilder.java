@@ -65,6 +65,18 @@ public class FormBuilder {
         return this;
     }
 
+    public FormBuilder Item(ItemStack... items) {
+        EnsureEditingActivity();
+        editingActivity.Add(items);
+        return this;
+    }
+
+    public FormBuilder Item(ItemStack item, IActionHandler handler) {
+        EnsureEditingActivity();
+        editingActivity.Add(item, handler);
+        return this;
+    }
+
     public FormBuilder Item(int x, int y, ItemStack item) {
         return Item(x, y, item, IActionHandler.Deny());
     }

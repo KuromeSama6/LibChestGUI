@@ -27,6 +27,7 @@ public class UserInterface implements Listener {
     @Getter
     private final ChestGUI gui;
     private boolean destroyed;
+    private int tickTimerHandle = 0;
 
     public UserInterface(JavaPlugin plugin, Player player) {
         this.plugin = plugin;
@@ -36,6 +37,11 @@ public class UserInterface implements Listener {
         gui = new ChestGUI(this);
 
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        tickTimerHandle = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this::Tick, 0L, 1L);
+    }
+
+    private void Tick() {
+        gui.setClosedThisTick(false);
     }
 
     public void Update() {
@@ -95,11 +101,6 @@ public class UserInterface implements Listener {
                 menu.PushMenu(menu.GetActiveMenu());
             }
 
-            player.getInventory().setArmorContents(new ItemStack[4]);
-            for (int i = 9; i < 36; i++) {
-                player.getInventory().setItem(i, null);
-            }
-
             return;
         }
 
@@ -130,6 +131,7 @@ public class UserInterface implements Listener {
         }
         destroyed = true;
         HandlerList.unregisterAll(this);
+        Bukkit.getScheduler().cancelTask(tickTimerHandle);
     }
 
     protected void EnsureValid() {
