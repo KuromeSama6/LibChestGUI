@@ -18,6 +18,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.Stack;
 
 public class ChestGUI extends InventoryUserInterface {
+    @Getter
     private final Stack<Form> forms = new Stack<>();
     private Inventory currentInventory;
     @Setter @Getter
@@ -174,7 +175,6 @@ public class ChestGUI extends InventoryUserInterface {
     public void OnInteract(PlayerInteractEvent e) {
 
     }
-
 
     public Form GetActiveForm() {
         return forms.isEmpty() ? null : forms.peek();

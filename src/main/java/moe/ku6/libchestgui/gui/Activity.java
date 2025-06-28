@@ -91,6 +91,14 @@ public class Activity {
                 .min(Comparator.naturalOrder())
                 .orElse(-1);
     }
+
+    public int NextFree(int start) {
+        return occupancy.stream()
+                .filter(slot -> slot >= start && !slots.containsKey(slot))
+                .min(Comparator.naturalOrder())
+                .orElse(-1);
+    }
+
     public List<ItemStack> Add(ItemStack... items) {
         var overflow = new ArrayList<ItemStack>();
         for (ItemStack item : items) {
@@ -106,6 +114,15 @@ public class Activity {
 
     public boolean Add(ItemStack item, IActionHandler handler) {
         int slot = FirstFree();
+        if (slot == -1) {
+            return false;
+        }
+        Set(slot, item, handler);
+        return true;
+    }
+
+    public boolean Add(int start, ItemStack item, IActionHandler handler) {
+        int slot = NextFree(start);
         if (slot == -1) {
             return false;
         }

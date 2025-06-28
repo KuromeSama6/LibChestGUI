@@ -106,7 +106,7 @@ public class HotbarMenu extends InventoryUserInterface {
     public void OnInventoryClick(InventoryClickEvent e) {
         if (e.getWhoClicked() != userInterface.getPlayer()) return;
         var slot = e.getSlot();
-        if (slot >= 9 || GetActiveMenu() == null) return;
+        if (slot < 0 || slot >= 9 || GetActiveMenu() == null) return;
 
         e.setCancelled(true);
         var menu = GetActiveMenu();
