@@ -132,6 +132,9 @@ public class ChestGUI extends InventoryUserInterface {
 
         Bukkit.getScheduler().scheduleSyncDelayedTask(userInterface.getPlugin(), () -> {
             if (ctx.isPopNow()) {
+                if (current.getOnPreClose() != null) {
+                    current.getOnPreClose().Handle();
+                }
                 Pop(current);
                 return;
             }
@@ -167,6 +170,10 @@ public class ChestGUI extends InventoryUserInterface {
         if (closedThisTick) {
             closedThisTick = false;
             return;
+        }
+
+        if (current.getOnPreClose() != null) {
+            current.getOnPreClose().Handle();
         }
         Bukkit.getScheduler().scheduleSyncDelayedTask(userInterface.getPlugin(), () -> Pop(current), 1);
     }

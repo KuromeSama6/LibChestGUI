@@ -140,6 +140,10 @@ public class FormBuilder {
         form.setOnOpen(handler);
         return this;
     }
+    public FormBuilder OnPreClose(IFormCloseHandler handler) {
+        form.setOnPreClose(handler);
+        return this;
+    }
     public FormBuilder OnClose(IFormCloseHandler handler) {
         form.setOnClose(handler);
         return this;

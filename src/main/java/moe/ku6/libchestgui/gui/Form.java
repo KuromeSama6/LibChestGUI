@@ -22,7 +22,7 @@ public class Form {
     private int rows;
     private final List<Activity> activities = new ArrayList<>();
     private IFormOpenHandler onOpen;
-    private IFormCloseHandler onClose;
+    private IFormCloseHandler onPreClose, onClose;
     private IFormUpdateHandler onUpdate;
     private IDropItemHandler onDropItem;
     private IPostDropItemHandler onPostDropItem;
